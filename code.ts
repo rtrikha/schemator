@@ -7,7 +7,7 @@ figma.on('run', () => {
   }
 
   const selectedNode = selection[0];
-  let updatedCount = 0; // Counter for updated component names
+  const updatedCount = { count: 0 }; // Counter for updated component names
 
   // Function to convert a string to title case
   function toTitleCase(str: string): string {
@@ -61,8 +61,8 @@ figma.on('run', () => {
             name: titleCasedName,
             // Do not include defaultValue for variant properties
           });
-          updatedCount++; // Increment the updated count
-          console.log(`Updated property: ${key} to ${titleCasedName}. Total updated: ${updatedCount}`); // Log the update
+          updatedCount.count++; // Increment the updated count
+          console.log(`Updated property: ${key} to ${titleCasedName}. Total updated: ${updatedCount.count}`); // Log the update
         }
       });
     }
@@ -79,7 +79,7 @@ figma.on('run', () => {
         for (let i = children.length - 1; i >= 0; i--) {
           const child = children[i];
           console.log(`  Child layer: ${child.name}`); // Log the name of each child
-          renameChildNodes(child); // Rename each child node
+          renameChildNodes(child, updatedCount); // Rename each child node
         }
       }
       processComponentProperties(node);
@@ -89,20 +89,41 @@ figma.on('run', () => {
   }
 
   // Function to rename child nodes to title case while ignoring '=' and ','
-  function renameChildNodes(child: BaseNode) {
+  function renameChildNodes(child: BaseNode, updatedCount: { count: number }) {
+
+    // Check for "2xs" and rename to "Extra Extra Small"
+    if (/\b2xs\b/i.test(child.name)) {
+      child.name = child.name.replace(/\b2xs\b/gi, "Extra Extra Small");
+      updatedCount.count++; // Increment the update count
+    }
+
+    // Check for "xs" and rename to "Extra Small"
+    if (/\bxs\b/i.test(child.name)) {
+      child.name = child.name.replace(/\bxs\b/gi, "Extra Small");
+      updatedCount.count++; // Increment the update count
+    }
+
     // Check for "sm" or "s" and rename to "Small"
-    if (/\bsm\b/.test(child.name) || /\bs\b/.test(child.name)) {
-      child.name = child.name.replace(/\bsm\b/g, "Small").replace(/\bs\b/g, "Small");
+    if (/\bsm\b/i.test(child.name) || /\bs\b/i.test(child.name)) {
+      child.name = child.name.replace(/\bsm\b/gi, "Small").replace(/\bs\b/gi, "Small");
+      updatedCount.count++; // Increment the update count
     }
 
     // Check for "md" or "m" and rename to "Medium"
-    if (/\bmd\b/.test(child.name) || /\bm\b/.test(child.name)) {
-      child.name = child.name.replace(/\bmd\b/g, "Medium").replace(/\bm\b/g, "Medium");
+    if (/\bmd\b/i.test(child.name) || /\bm\b/i.test(child.name)) {
+      child.name = child.name.replace(/\bmd\b/gi, "Medium").replace(/\bm\b/gi, "Medium");
+      updatedCount.count++; // Increment the update count
     }
 
     // Check for "lg" or "l" and rename to "Large"
-    if (/\blg\b/.test(child.name) || /\bl\b/.test(child.name)) {
-      child.name = child.name.replace(/\blg\b/g, "Large").replace(/\bl\b/g, "Large");
+    if (/\blg\b/i.test(child.name) || /\bl\b/i.test(child.name)) {
+      child.name = child.name.replace(/\blg\b/gi, "Large").replace(/\bl\b/gi, "Large");
+      updatedCount.count++; // Increment the update count
+    }
+
+    if (/\bxl\b/i.test(child.name)) {
+      child.name = child.name.replace(/\bxl\b/gi, "Extra Large");
+      updatedCount.count++; // Increment the update count
     }
 
     // Split the name by spaces, but keep '=' and ',' intact
@@ -117,7 +138,13 @@ figma.on('run', () => {
     });
 
     // Join the parts back together
-    child.name = renamedParts.join(' ');
+    const newName = renamedParts.join(' ');
+
+    // Update the child name and increment the counter if it has changed
+    if (newName !== child.name) {
+      child.name = newName; // Update the child name
+      updatedCount.count++; // Increment the update count for title case change
+    }
 
     console.log(`  Final renamed child layer to: ${child.name}`); // Log the final renaming action
   }
@@ -131,7 +158,7 @@ figma.on('run', () => {
       // Process children in reverse order
       for (let i = selectedNode.children.length - 1; i >= 0; i--) {
         const child = selectedNode.children[i];
-        renameChildNodes(child);
+        renameChildNodes(child, updatedCount);
       }
     }
     processComponentProperties(selectedNode); // Process directly if it's a component
@@ -141,9 +168,9 @@ figma.on('run', () => {
   }
 
   // Close the plugin and display the number of updated component names
-  if (updatedCount === 0) {
+  if (updatedCount.count === 0) {
     figma.closePlugin('No properties to update.');
   } else {
-    figma.closePlugin(`${updatedCount} component property(s) updated successfully.`);
+    figma.closePlugin(`${updatedCount.count} component property(s) updated successfully.`);
   }
 });
