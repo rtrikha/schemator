@@ -35,9 +35,6 @@ figma.on('run', () => {
   // Function to process component properties
   function processComponentProperties(node: ComponentNode | ComponentSetNode) {
     if ('componentPropertyDefinitions' in node) {
-      // Log all component property definitions
-      console.log('Component Property Definitions:', node.componentPropertyDefinitions);
-
       Object.entries(node.componentPropertyDefinitions).forEach(([key, def]) => {
         const cleanedKey = key.split('#')[0].trim(); // Clean and trim the property name
         let newKey = cleanedKey; // Initialize newKey with cleanedKey
@@ -53,21 +50,6 @@ figma.on('run', () => {
         if (def.type === 'TEXT') {
           if (!cleanedKey.toLowerCase().endsWith(' text')) {
             newKey = cleanedKey + ' Text'; // Add ' Text' suffix if missing
-          }
-        }
-
-        // Handle VARIANT properties
-        if (def.type === 'VARIANT' && cleanedKey.toLowerCase() === 'size') {
-          console.log(`Variant Property Key: ${cleanedKey}`, def); // Print only "Size" variant properties
-
-          // Traverse through all variant options and convert to title case
-          if (def.variantOptions) {
-            def.variantOptions.forEach(option => {
-              const titleCasedOption = toTitleCase(option); // Convert to title case
-              console.log(`Updated variant option: "${option}" to "${titleCasedOption}"`); // Log the update
-              // Here you would typically update the variant option in your logic
-              // Since you cannot directly modify variant values via the API, you can log or handle it as needed
-            });
           }
         }
 
@@ -89,16 +71,69 @@ figma.on('run', () => {
   // Function to traverse nodes in a frame
   function traverseNodes(node: BaseNode) {
     if (node.type === 'COMPONENT' || node.type === 'COMPONENT_SET') {
+      console.log(`Found component: ${node.name}`); // Log the layer name of the component
+      // Log the names of all children inside this component
+      if ('children' in node && node.children.length > 0) {
+        const children = node.children; // Get the children array
+        // Process children in reverse order
+        for (let i = children.length - 1; i >= 0; i--) {
+          const child = children[i];
+          console.log(`  Child layer: ${child.name}`); // Log the name of each child
+          renameChildNodes(child); // Rename each child node
+        }
+      }
       processComponentProperties(node);
     } else if ('children' in node) {
       node.children.forEach(traverseNodes); // Recursively traverse children
     }
   }
 
+  // Function to rename child nodes to title case while ignoring '=' and ','
+  function renameChildNodes(child: BaseNode) {
+    // Check for "sm" or "s" and rename to "Small"
+    if (/\bsm\b/.test(child.name) || /\bs\b/.test(child.name)) {
+      child.name = child.name.replace(/\bsm\b/g, "Small").replace(/\bs\b/g, "Small");
+    }
+
+    // Check for "md" or "m" and rename to "Medium"
+    if (/\bmd\b/.test(child.name) || /\bm\b/.test(child.name)) {
+      child.name = child.name.replace(/\bmd\b/g, "Medium").replace(/\bm\b/g, "Medium");
+    }
+
+    // Check for "lg" or "l" and rename to "Large"
+    if (/\blg\b/.test(child.name) || /\bl\b/.test(child.name)) {
+      child.name = child.name.replace(/\blg\b/g, "Large").replace(/\bl\b/g, "Large");
+    }
+
+    // Split the name by spaces, but keep '=' and ',' intact
+    const parts = child.name.split(/(=|,)/g).map(part => part.trim());
+
+    // Convert each part to title case, ignoring '=' and ','
+    const renamedParts = parts.map(part => {
+      if (part === '=' || part === ',') {
+        return part; // Keep '=' and ',' unchanged
+      }
+      return toTitleCase(part); // Convert to title case
+    });
+
+    // Join the parts back together
+    child.name = renamedParts.join(' ');
+
+    console.log(`  Final renamed child layer to: ${child.name}`); // Log the final renaming action
+  }
+
   // Start processing the selected node
   if (selectedNode.type === 'FRAME' || selectedNode.type === 'GROUP') {
     traverseNodes(selectedNode); // Traverse through all nodes in the frame
   } else if (selectedNode.type === 'COMPONENT' || selectedNode.type === 'COMPONENT_SET') {
+    // Log the names of all children inside the selected component
+    if ('children' in selectedNode) {
+      // Process children in reverse order
+      for (let i = selectedNode.children.length - 1; i >= 0; i--) {
+        const child = selectedNode.children[i];
+        renameChildNodes(child);
+      }
+    }
     processComponentProperties(selectedNode); // Process directly if it's a component
   } else {
     figma.closePlugin('Please select a valid frame, group, or component.');
