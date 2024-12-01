@@ -1,2 +1,4 @@
-![alt text]([schematorLogo.png](https://github.com/rtrikha/schemator/blob/2bed2f2079b06c9fc817012059609bd6227dbca5/schematorLogo.png))
-WIP
+<p align="center">
+<img width="30%" margin="0 auto" alt="schematorLogo" src="https://github.com/user-attachments/assets/2949ff89-4fc9-4363-aaee-2feb5f21a3c7">
+</p>
+
