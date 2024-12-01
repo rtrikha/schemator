@@ -83,7 +83,7 @@ figma.on('run', () => {
   } else if (selectedNode.type === 'COMPONENT' || selectedNode.type === 'COMPONENT_SET') {
     processComponentProperties(selectedNode); // Process directly if it's a component
   } else {
-    figma.closePlugin('Please select a valid frame, group, or component');
+    figma.closePlugin('Please select a valid frame, group, or component.');
     return;
   }
 
