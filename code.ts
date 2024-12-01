@@ -35,6 +35,9 @@ figma.on('run', () => {
   // Function to process component properties
   function processComponentProperties(node: ComponentNode | ComponentSetNode) {
     if ('componentPropertyDefinitions' in node) {
+      // Log all component property definitions
+      console.log('Component Property Definitions:', node.componentPropertyDefinitions);
+
       Object.entries(node.componentPropertyDefinitions).forEach(([key, def]) => {
         const cleanedKey = key.split('#')[0].trim(); // Clean and trim the property name
         let newKey = cleanedKey; // Initialize newKey with cleanedKey
@@ -50,6 +53,21 @@ figma.on('run', () => {
         if (def.type === 'TEXT') {
           if (!cleanedKey.toLowerCase().endsWith(' text')) {
             newKey = cleanedKey + ' Text'; // Add ' Text' suffix if missing
+          }
+        }
+
+        // Handle VARIANT properties
+        if (def.type === 'VARIANT' && cleanedKey.toLowerCase() === 'size') {
+          console.log(`Variant Property Key: ${cleanedKey}`, def); // Print only "Size" variant properties
+
+          // Traverse through all variant options and convert to title case
+          if (def.variantOptions) {
+            def.variantOptions.forEach(option => {
+              const titleCasedOption = toTitleCase(option); // Convert to title case
+              console.log(`Updated variant option: "${option}" to "${titleCasedOption}"`); // Log the update
+              // Here you would typically update the variant option in your logic
+              // Since you cannot directly modify variant values via the API, you can log or handle it as needed
+            });
           }
         }
 
