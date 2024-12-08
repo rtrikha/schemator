@@ -1,4 +1,7 @@
+import { generateSchema } from '../generateSchema'; // Adjust the path as necessary
+
 const renameConditions = [
+
   { regex: /\b2xs\b/i, replacement: "Extra Extra Small" },
   { regex: /\bxs\b/i, replacement: "Extra Small" },
   { regex: /\bsm\b/i, replacement: "Small" },
@@ -16,6 +19,10 @@ const casingStyle: 'title' | 'upper' | 'lower' | 'sentence' | 'camel' = 'title';
 
 const updatedCount = { count: 0 }; // for final output logging, dont update this
 
+// New function to get immediate child nodes of a COMPONENT_SET
+function getChildNodes(node: ComponentSetNode): BaseNode[] {
+  return [...node.children]; // Create a mutable copy of the immediate children
+}
 
 figma.on('run', () => {
   const selection = figma.currentPage.selection;
@@ -27,7 +34,6 @@ figma.on('run', () => {
 
   const selectedNode = selection[0];
 
-  // Ensure the selected node is a component set
   if (selectedNode.type === 'COMPONENT') {
     figma.closePlugin('Please select the parent component set, not a single component');
     return;
@@ -35,7 +41,6 @@ figma.on('run', () => {
     figma.closePlugin('Please select a valid component set.');
     return;
   }
-
 
   function toCasedString(str: string): string {
     if (casingStyle === 'upper') return str.toUpperCase();
@@ -96,13 +101,14 @@ figma.on('run', () => {
     }
   }
 
+
   if (selectedNode.type === 'COMPONENT_SET') {
     processComponentProperties(selectedNode);
-    if ('children' in selectedNode) {
-      selectedNode.children.forEach(child => {
-        renameChildNodes(child, updatedCount);
-      });
-    }
+    const childNodes = getChildNodes(selectedNode); // Use the new function to get immediate child nodes
+    childNodes.forEach(child => {
+      renameChildNodes(child, updatedCount);
+    });
+    generateSchema();
   }
 
   if (updatedCount.count === 0) {
