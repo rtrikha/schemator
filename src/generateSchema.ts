@@ -1,65 +1,86 @@
-export function generateSchema(node: ComponentNode | ComponentSetNode): string {
-    console.log("works");
+export function generateSchemaJSON(node: ComponentNode | ComponentSetNode): string {
+    console.log("Generating schema...");
 
-    const propertyDefinitionsArray: Array<{ key: string; type: ComponentPropertyType }> = [];
+    const propertyDefinitionsArray: Array<{
+        key: string;
+        type: ComponentPropertyType;
+        defaultValue?: string | number | boolean | null;
+    }> = [];
+
+    let instanceNodesArray: Array<{
+        name: string;
+        exposedInstanceType?: string;
+    }> = [];
 
     if ('componentPropertyDefinitions' in node) {
         for (const [key, definition] of Object.entries(node.componentPropertyDefinitions)) {
-            const cleanedKey = toCamelCase(key.split('?')[0].trim());
-            propertyDefinitionsArray.push({ key: cleanedKey, type: definition.type });
+            const cleanedKey = key.replace(/[\d#]+/g, '');
+            const defaultValue = definition.defaultValue !== undefined ? definition.defaultValue : null;
+
+            const property = {
+                key: cleanedKey,
+                type: definition.type,
+                defaultValue,
+            };
+
+            propertyDefinitionsArray.push(property);
         }
-        console.log("Cleaned Component Property Definitions Array:", propertyDefinitionsArray);
+        console.log("Component Property Definitions:", propertyDefinitionsArray);
     } else {
         console.log("No component property definitions found.");
-        return '';
     }
 
-    const interfaceName = `${toPascalCase(node.name)}Props`;
-    const interfaceCode = generateInterfaceTemplate(interfaceName, propertyDefinitionsArray);
+    function traverseNodeTree(currentNode: BaseNode) {
+        if (currentNode.type === 'INSTANCE') {
+            const isExposedInstance = currentNode.exposedInstances?.length > 0 || false;
+            const exposedInstanceType = isExposedInstance
+                ? currentNode.exposedInstances?.[0]?.type
+                : undefined;
 
-    console.log("Generated Interface Code:\n", interfaceCode);
+            const componentProperties = [];
+            if ('componentProperties' in currentNode) {
+                for (const [key, property] of Object.entries(currentNode.componentProperties)) {
+                    const cleanedKey = key.replace(/[\d#]+/g, '');
+                    const value = property.value !== undefined ? property.value : null;
 
-    return interfaceCode;
-}
+                    componentProperties.push({
+                        key: cleanedKey,
+                        type: property.type,
+                        defaultValue: value,
+                    });
+                }
+            }
 
+            instanceNodesArray.push({
+                name: currentNode.name,
+                exposedInstanceType,
+            });
+        }
 
-function mapTypeToDefinition(type: ComponentPropertyType): string {
-    switch (type) {
-        case 'BOOLEAN':
-            return 'boolean';
-        case 'TEXT':
-            return 'string';
-        default:
-            return 'any';
+        if ('children' in currentNode && currentNode.children) {
+            currentNode.children.forEach(traverseNodeTree);
+        }
     }
-}
 
-function toCamelCase(str: string): string {
-    return str
-        .toLowerCase()
-        .replace(/[^a-zA-Z0-9]+(.)/g, (_, char) => char.toUpperCase());
-}
+    traverseNodeTree(node);
 
-function toPascalCase(str: string): string {
-    return str
-        .replace(/[^a-zA-Z0-9]+/g, ' ')
-        .split(' ')
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join('');
-}
+    // instanceNodesArray = instanceNodesArray.filter(
+    //     (instanceNode) => instanceNode.exposedInstanceType?.toLowerCase() !== "instance"
+    // );
 
-function generateInterfaceTemplate(
-    interfaceName: string,
-    properties: Array<{ key: string; type: ComponentPropertyType }>
-): string {
-    const lines: string[] = [];
-    lines.push(`export interface ${interfaceName} {`);
-
-    properties.forEach(({ key, type }) => {
-        lines.push(`  ${key}?: ${mapTypeToDefinition(type)};`);
+    const seenNames = new Set();
+    instanceNodesArray = instanceNodesArray.filter((instanceNode) => {
+        if (seenNames.has(instanceNode.name)) {
+            return false;
+        }
+        seenNames.add(instanceNode.name);
+        return true;
     });
 
-    lines.push('}');
+    console.log("Component Extends", instanceNodesArray);
 
-    return lines.join('\n');
+    return JSON.stringify({
+        componentProperties: propertyDefinitionsArray,
+        instanceNodes: instanceNodesArray,
+    });
 }

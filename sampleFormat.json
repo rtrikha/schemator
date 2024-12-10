@@ -1,0 +1,25 @@
+{
+  "actionHeader": {
+    "nodeType": "component",
+    "nodeId": "11456678009785642",
+    "props": {
+      "size": {
+        "dataType": "enum",
+        "variantOptions": ["small", "medium", "large"],
+        "defaultValue": "small"
+      },
+      "type": {
+        "dataType": "enum",
+        "variantOptions": ["icon", "illustration"],
+        "defaultValue": "icon"
+      },
+      "title": {
+        "dataType": "string"
+      },
+      "subtitle": {
+        "dataType": "string"
+      }
+    },
+    "extends": ["avatar", "button"]
+  }
+}

@@ -1,4 +1,4 @@
-import { generateSchema } from './generateSchema';
+import { generateSchemaJSON } from './generateSchema';
 const renameConditions = [
   { regex: /\b2xs\b/i, replacement: "Extra Extra Small" },
   { regex: /\bxs\b/i, replacement: "Extra Small" },
@@ -21,13 +21,22 @@ function getChildNodes(node: ComponentSetNode): BaseNode[] {
   return [...node.children];
 }
 
-figma.on('run', () => {
+figma.on('run', async () => {
   const selection = figma.currentPage.selection;
 
-  if (selection.length !== 1) {
-    figma.closePlugin('Please select a single component or component set.');
-    return;
-  }
+  // await figma.loadAllPagesAsync();
+
+  // const allNodes = figma.root.findAll();
+  // allNodes.forEach(node => {
+  //   if (node.type === 'COMPONENT' || node.type === 'COMPONENT_SET') {
+  //     console.log(`Found ${node.type}: ${node.name}`);
+  //   }
+  // });
+
+  // if (selection.length !== 1) {
+  //   figma.closePlugin('Please select a single component or component set.');
+  //   return;
+  // }
 
   const selectedNode = selection[0];
 
@@ -46,7 +55,7 @@ figma.on('run', () => {
   }
 
   console.log("Calling generateSchema after all processing");
-  generateSchema(selectedNode);
+  generateSchemaJSON(selectedNode);
 
   if (updatedCount.count === 0) {
     figma.closePlugin('No properties to update.');
