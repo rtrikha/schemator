@@ -67,6 +67,7 @@ export function generateSchemaJSON(node: ComponentNode | ComponentSetNode): stri
         }> = [];
 
         if ('children' in parentNode && parentNode.children) {
+            1
             parentNode.children.forEach((child) => {
                 if (child.type === 'INSTANCE' && !seenInstanceIds.has(child.id)) {
                     seenInstanceIds.add(child.id);
@@ -150,10 +151,10 @@ export function generateSchemaJSON(node: ComponentNode | ComponentSetNode): stri
         return true;
     });
 
-    console.log("Uses", instanceNodesArray);
+    //console.log("Uses", instanceNodesArray);
 
     return JSON.stringify({
         componentProperties: propertyDefinitionsArray,
-        instanceNodes: instanceNodesArray,
+        // instanceNodes: instanceNodesArray,
     });
 }

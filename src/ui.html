@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Schemator JSON Export</title>
+  </head>
+  <body>
+    <h3>Run Cleanup and Download Schema JSON</h3>
+    <button id="cleanup-btn">Run Cleanup</button>
+    <button id="download-btn">Download JSON</button>
+    <script>
+      const cleanupBtn = document.getElementById('cleanup-btn')
+      const downloadBtn = document.getElementById('download-btn')
+
+      let jsonToDownload = null // Variable to store JSON data until the user clicks "Download"
+      let selectedComponentName = 'schema' // Default name
+
+      // Listen for messages from the plugin
+      window.onmessage = (event) => {
+        const msg = event.data.pluginMessage
+
+        if (msg.type === 'schema-json') {
+          console.log('Received JSON from plugin:', msg.json) // Debugging log
+          jsonToDownload = msg.json // Store the JSON for later download
+        }
+
+        if (msg.type === 'selected-component-name') {
+          selectedComponentName = msg.name // Update the component name
+          console.log('Selected component name:', selectedComponentName) // Debugging log
+        }
+      }
+
+      cleanupBtn.addEventListener('click', () => {
+        console.log('Cleanup button clicked') // Debugging log
+        // Post a message to the plugin to run cleanup and sanitization
+        parent.postMessage({ pluginMessage: { type: 'run-cleanup' } }, '*')
+      })
+
+      downloadBtn.addEventListener('click', () => {
+        console.log('Download button clicked now') // Debugging log
+
+        if (!jsonToDownload) {
+          alert('Please select a valid component or component set.')
+          return
+        }
+
+        // Create a blob and trigger download
+        const blob = new Blob([JSON.stringify(jsonToDownload)], {
+          type: 'application/json',
+        })
+        const url = URL.createObjectURL(blob)
+
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${selectedComponentName}Schema.json` // Set the download filename
+        a.click()
+
+        URL.revokeObjectURL(url)
+      })
+    </script>
+  </body>
+</html>
