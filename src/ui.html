@@ -11,51 +11,66 @@
       const cleanupBtn = document.getElementById('cleanup-btn')
       const downloadBtn = document.getElementById('download-btn')
 
-      let jsonToDownload = null // Variable to store JSON data until the user clicks "Download"
-      let selectedComponentName = 'schema' // Default name
+      let jsonToDownload = null
+      let selectedComponentName = 'schema'
 
-      // Listen for messages from the plugin
+      function toCamelCase(str) {
+        return str
+          .replace(/(?:^\w|[A-Z]|\b\w|\s+)/g, (match, index) =>
+            index === 0 ? match.toLowerCase() : match.toUpperCase()
+          )
+          .replace(/\s+/g, '')
+      }
+
       window.onmessage = (event) => {
         const msg = event.data.pluginMessage
 
-        if (msg.type === 'schema-json') {
-          console.log('Received JSON from plugin:', msg.json) // Debugging log
-          jsonToDownload = msg.json // Store the JSON for later download
-        }
-
-        if (msg.type === 'selected-component-name') {
-          selectedComponentName = msg.name // Update the component name
-          console.log('Selected component name:', selectedComponentName) // Debugging log
+        if (msg.type === 'download-ready') {
+          jsonToDownload = msg.json
+          selectedComponentName = toCamelCase(msg.name)
+          console.log('Received fresh data:', {
+            jsonToDownload,
+            selectedComponentName,
+          })
+          triggerDownload()
+        } else if (msg.type === 'schema-json') {
+          jsonToDownload = msg.json
+          console.log('Schema JSON received:', jsonToDownload)
+        } else if (msg.type === 'selected-component-name') {
+          selectedComponentName = toCamelCase(msg.name)
+          console.log('Component name set:', selectedComponentName)
         }
       }
 
       cleanupBtn.addEventListener('click', () => {
         console.log('Cleanup button clicked') // Debugging log
-        // Post a message to the plugin to run cleanup and sanitization
         parent.postMessage({ pluginMessage: { type: 'run-cleanup' } }, '*')
       })
 
       downloadBtn.addEventListener('click', () => {
-        console.log('Download button clicked now') // Debugging log
+        console.log('Download button clicked')
+        parent.postMessage({ pluginMessage: { type: 'download-json' } }, '*')
+      })
 
+      function triggerDownload() {
         if (!jsonToDownload) {
-          alert('Please select a valid component or component set.')
+          console.error('No JSON data available for download')
           return
         }
 
-        // Create a blob and trigger download
-        const blob = new Blob([JSON.stringify(jsonToDownload)], {
+        const blob = new Blob([jsonToDownload], {
           type: 'application/json',
         })
         const url = URL.createObjectURL(blob)
 
         const a = document.createElement('a')
         a.href = url
-        a.download = `${selectedComponentName}Schema.json` // Set the download filename
+        a.download = `${selectedComponentName}Schema.json`
         a.click()
 
         URL.revokeObjectURL(url)
-      })
+        console.log('Download completed')
+      }
     </script>
   </body>
 </html>

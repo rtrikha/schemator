@@ -16,83 +16,30 @@ const booleanCustomSuffix = '?';
 const textCustomSuffix = ' Text';
 const casingStyle: 'title' | 'upper' | 'lower' | 'sentence' | 'camel' = 'title';
 
-// Helper to validate the selection
-function isValidSelection(selection: readonly SceneNode[]): boolean {
-  return (
-    selection.length > 0 &&
-    selection.every((node) => node.type === 'COMPONENT' || node.type === 'COMPONENT_SET')
-  );
+// Function to get and validate the current selection
+function getValidSelection(): { node: ComponentNode | ComponentSetNode; name: string } | null {
+  console.log('Rescanning current selection...');
+  const selection = figma.currentPage.selection;
+
+  if (
+    selection.length === 1 &&
+    (selection[0].type === 'COMPONENT' || selection[0].type === 'COMPONENT_SET')
+  ) {
+    const node = selection[0] as ComponentNode | ComponentSetNode;
+    console.log('Valid selection found:', node.name);
+    return { node, name: node.name };
+  }
+
+  console.warn('Invalid or no selection. Please select a valid component or component set.');
+  figma.notify('Please select a valid component or component set.');
+  return null;
 }
 
-figma.on('run', () => {
-  const selection = figma.currentPage.selection;
-
-  if (!isValidSelection(selection)) {
-    figma.notify('Please select a valid component or component set to run the plugin.');
-    figma.closePlugin(); // Exit the plugin immediately
-    return;
-  }
-
-  figma.showUI(__html__, { width: 300, height: 200 });
-
-  const selectedNode = selection[0];
-
-  // Type guard to ensure selectedNode is a ComponentNode or ComponentSetNode
-  if (selectedNode.type !== 'COMPONENT' && selectedNode.type !== 'COMPONENT_SET') {
-    figma.notify('Selected node is not a valid component or component set.');
-    return; // Exit if the selected node is invalid
-  }
-
-  const schemaJSON = generateSchemaJSON(selectedNode as ComponentNode | ComponentSetNode);
-  console.log('Generated JSON on load:', schemaJSON); // Debugging log
-  figma.ui.postMessage({ type: 'schema-json', json: schemaJSON });
-  figma.ui.postMessage({ type: 'selected-component-name', name: selectedNode.name });
-});
-
-figma.ui.onmessage = (msg) => {
-  const selection = figma.currentPage.selection;
-
-  if (!isValidSelection(selection)) {
-    figma.notify('Please select a valid component or component set to proceed.');
-    figma.closePlugin(); // Exit if the selection is invalid
-    return;
-  }
-
-  const selectedNode = selection[0];
-
-  if (msg.type === 'run-cleanup') {
-    // Type guard to ensure selectedNode is a ComponentNode or ComponentSetNode
-    if (selectedNode.type !== 'COMPONENT' && selectedNode.type !== 'COMPONENT_SET') {
-      figma.notify('Selected node is not a valid component or component set.');
-      return; // Exit if the selected node is invalid
-    }
-
-    const resultMessage = processAndRenameComponents(selectedNode as ComponentNode | ComponentSetNode);
-    console.log('Cleanup result:', resultMessage); // Debugging log
-    const schemaJSON = generateSchemaJSON(selectedNode as ComponentNode | ComponentSetNode);
-    console.log('Generated JSON:', schemaJSON); // Debugging log
-    figma.ui.postMessage({ type: 'schema-json', json: schemaJSON });
-    figma.ui.postMessage({ type: 'selected-component-name', name: selectedNode.name });
-    figma.notify(resultMessage); // Notify the user with the result message
-  } else if (msg.type === 'download-json') {
-    // Type guard to ensure selectedNode is a ComponentNode or ComponentSetNode
-    if (selectedNode.type !== 'COMPONENT' && selectedNode.type !== 'COMPONENT_SET') {
-      figma.notify('Selected node is not a valid component or component set.');
-      return; // Exit if the selected node is invalid
-    }
-
-    const schemaJSON = generateSchemaJSON(selectedNode as ComponentNode | ComponentSetNode);
-    console.log('Generated JSON:', schemaJSON); // Debugging log
-    figma.ui.postMessage({ type: 'schema-json', json: schemaJSON });
-    figma.ui.postMessage({ type: 'selected-component-name', name: selectedNode.name });
-  } else if (msg.type === 'close') {
-    figma.closePlugin();
-  }
-};
-
-function processAndRenameComponents(node: ComponentNode | ComponentSetNode): string {
-  let updatedCount = 0; // Counter for renaming changes
-  let suffixAddedCount = 0; // Counter for suffix additions
+// Function to process and rename nodes
+function processAndRenameComponents(node: ComponentNode | ComponentSetNode): { updatedCount: number; suffixAddedCount: number } {
+  console.log('Starting node processing...');
+  let updatedCount = 0;
+  let suffixAddedCount = 0;
 
   // Rename component properties
   if ('componentPropertyDefinitions' in node) {
@@ -100,37 +47,26 @@ function processAndRenameComponents(node: ComponentNode | ComponentSetNode): str
       const cleanedKey = key.split('#')[0].trim();
       const sanitizedKey = cleanedKey.replace(/[^a-zA-Z0-9\s]/g, '');
 
-      let suffixedKey = cleanedKey; // Holds the suffixed key
-      let formattedKey = sanitizedKey; // Holds the renamed node value
-      let suffixAdded = false; // Flag to track if a suffix was added
+      let suffixedKey = cleanedKey;
+      let suffixAdded = false;
 
-      // Add suffix only if it is not already present
-      if (def.type === 'BOOLEAN') {
-        if (!cleanedKey.toLowerCase().endsWith(booleanCustomSuffix.toLowerCase())) {
-          suffixedKey = sanitizedKey + booleanCustomSuffix;
-          suffixAdded = true;
-        }
-      } else if (def.type === 'TEXT') {
-        if (!cleanedKey.toLowerCase().endsWith(textCustomSuffix.toLowerCase())) {
-          suffixedKey = sanitizedKey + textCustomSuffix;
-          suffixAdded = true;
-        }
+      // Add suffix only if not already present
+      if (def.type === 'BOOLEAN' && !cleanedKey.endsWith(booleanCustomSuffix)) {
+        suffixedKey = sanitizedKey + booleanCustomSuffix;
+        suffixAdded = true;
+      } else if (def.type === 'TEXT' && !cleanedKey.toLowerCase().endsWith(textCustomSuffix.toLowerCase())) {
+        suffixedKey = sanitizedKey + textCustomSuffix;
+        suffixAdded = true;
       }
 
-      // Avoid additional modifications if the suffixed key hasn't changed
-      if (sanitizedKey.toLowerCase().includes('text')) {
-        suffixedKey = sanitizedKey; // Keep suffixedKey unchanged
-      }
+      const formattedKey = toCasedString(suffixedKey);
 
-      formattedKey = toCasedString(suffixedKey);
-
-      // Check if the formatted key is different from the cleaned key
+      // Rename only if there is a change
       if (formattedKey !== cleanedKey) {
         node.editComponentProperty(key, { name: formattedKey });
         updatedCount++;
       }
 
-      // Increment suffixAddedCount only if a suffix was actually added
       if (suffixAdded) {
         suffixAddedCount++;
       }
@@ -140,18 +76,14 @@ function processAndRenameComponents(node: ComponentNode | ComponentSetNode): str
   // Rename child nodes if the node is a ComponentSet
   if (node.type === 'COMPONENT_SET') {
     node.children.forEach((child) => {
-      updatedCount += renameNode(child); // Count renaming changes for child nodes
+      updatedCount += renameNode(child);
     });
   } else {
-    updatedCount += renameNode(node); // Count renaming changes for single node
+    updatedCount += renameNode(node);
   }
 
-  return [
-    updatedCount > 0 ? `${updatedCount} node(s) renamed successfully` : '',
-    suffixAddedCount > 0 ? `${suffixAddedCount} suffix(es) added successfully` : '',
-  ]
-    .filter(Boolean)
-    .join(', ') || 'No changes made.';
+  console.log('Processing complete:', { updatedCount, suffixAddedCount });
+  return { updatedCount, suffixAddedCount };
 }
 
 // Helper: Renames a single node
@@ -197,3 +129,63 @@ function toCasedString(str: string): string {
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 }
+
+// Main plugin logic
+figma.on('run', () => {
+  const validSelection = getValidSelection();
+  if (!validSelection) {
+    figma.closePlugin();
+    return;
+  }
+
+  const { node } = validSelection;
+
+  figma.showUI(__html__, { width: 300, height: 200 });
+  figma.ui.postMessage({ type: 'selected-component-name', name: node.name });
+});
+
+figma.ui.onmessage = async (msg) => {
+  if (msg.type === 'run-cleanup') {
+    console.log('Running cleanup...');
+    const validSelection = getValidSelection();
+
+    if (!validSelection) {
+      figma.notify('No valid selection found.');
+      return;
+    }
+
+    const { node } = validSelection;
+    const { updatedCount, suffixAddedCount } = processAndRenameComponents(node);
+
+    const resultMessage = [
+      updatedCount > 0 ? `${updatedCount} node(s) renamed successfully` : '',
+      suffixAddedCount > 0 ? `${suffixAddedCount} suffix(es) added successfully` : '',
+    ]
+      .filter(Boolean)
+      .join(', ') || 'No changes made.';
+    figma.notify(resultMessage);
+
+    const schemaJSON = generateSchemaJSON(node);
+    figma.ui.postMessage({ type: 'schema-json', json: schemaJSON });
+  } else if (msg.type === 'download-json') {
+    console.log('Processing download request...');
+    const validSelection = getValidSelection();
+
+    if (!validSelection) {
+      figma.notify('No valid selection found.');
+      return;
+    }
+
+    const { node, name } = validSelection;
+    const schemaJSON = generateSchemaJSON(node);
+
+    // Send both the JSON and name in a single message
+    figma.ui.postMessage({
+      type: 'download-ready',
+      json: schemaJSON,
+      name: name
+    });
+  } else if (msg.type === 'close') {
+    figma.closePlugin();
+  }
+};
