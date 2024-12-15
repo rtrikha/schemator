@@ -21,22 +21,13 @@ function getChildNodes(node: ComponentSetNode): BaseNode[] {
   return [...node.children];
 }
 
-figma.on('run', async () => {
+figma.on('run', () => {
   const selection = figma.currentPage.selection;
 
-  // await figma.loadAllPagesAsync();
-
-  // const allNodes = figma.root.findAll();
-  // allNodes.forEach(node => {
-  //   if (node.type === 'COMPONENT' || node.type === 'COMPONENT_SET') {
-  //     console.log(`Found ${node.type}: ${node.name}`);
-  //   }
-  // });
-
-  // if (selection.length !== 1) {
-  //   figma.closePlugin('Please select a single component or component set.');
-  //   return;
-  // }
+  if (selection.length === 0) {
+    figma.closePlugin('Please select a component or component set to run the plugin.');
+    return;
+  }
 
   const selectedNode = selection[0];
 
