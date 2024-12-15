@@ -5,12 +5,30 @@ export function generateSchemaJSON(node: ComponentNode | ComponentSetNode): stri
         key: string;
         type: ComponentPropertyType;
         defaultValue?: string | number | boolean | null;
+        variantOptions?: string[] | null;
     }> = [];
 
     let instanceNodesArray: Array<{
+        id: string;
         name: string;
-        exposedInstanceType?: string;
+        parentName?: string;
+        isExposedInstance: boolean;
+        componentProperties?: Array<{
+            key: string;
+            type: ComponentPropertyType;
+            defaultValue?: string | number | boolean | null;
+        }>;
+        nestedInstances?: Array<{
+            name: string;
+            componentProperties?: Array<{
+                key: string;
+                type: ComponentPropertyType;
+                defaultValue?: string | number | boolean | null;
+            }>;
+        }>;
     }> = [];
+
+    const seenInstanceIds = new Set<string>();
 
     if ('componentPropertyDefinitions' in node) {
         for (const [key, definition] of Object.entries(node.componentPropertyDefinitions)) {
@@ -21,21 +39,72 @@ export function generateSchemaJSON(node: ComponentNode | ComponentSetNode): stri
                 key: cleanedKey,
                 type: definition.type,
                 defaultValue,
+                ...(definition.variantOptions ? { variantOptions: definition.variantOptions } : {}),
             };
 
             propertyDefinitionsArray.push(property);
         }
-        console.log("Component Property Definitions:", propertyDefinitionsArray);
-    } else {
-        console.log("No component property definitions found.");
+        console.log("Component Schema:", propertyDefinitionsArray);
+    }
+
+    function extractNestedInstances(parentNode: InstanceNode): Array<{
+        id: string;
+        name: string;
+        componentProperties?: Array<{
+            key: string;
+            type: ComponentPropertyType;
+            defaultValue?: string | number | boolean | null;
+        }>;
+    }> {
+        const nestedInstances: Array<{
+            id: string;
+            name: string;
+            componentProperties?: Array<{
+                key: string;
+                type: ComponentPropertyType;
+                defaultValue?: string | number | boolean | null;
+            }>;
+        }> = [];
+
+        if ('children' in parentNode && parentNode.children) {
+            parentNode.children.forEach((child) => {
+                if (child.type === 'INSTANCE' && !seenInstanceIds.has(child.id)) {
+                    seenInstanceIds.add(child.id);
+
+                    const componentProperties = [];
+                    if ('componentProperties' in child) {
+                        for (const [key, property] of Object.entries(child.componentProperties)) {
+                            const cleanedKey = key.replace(/[\d#]+/g, '');
+                            const value = property.value !== undefined ? property.value : null;
+
+                            componentProperties.push({
+                                key: cleanedKey,
+                                type: property.type,
+                                defaultValue: value,
+                            });
+                        }
+                    }
+
+                    if (componentProperties.length > 0) {
+                        nestedInstances.push({
+                            id: child.id,
+                            name: child.name,
+                            componentProperties,
+                        });
+
+                        const deeperNestedInstances = extractNestedInstances(child);
+                        nestedInstances.push(...deeperNestedInstances);
+                    }
+                }
+            });
+        }
+
+        return nestedInstances;
     }
 
     function traverseNodeTree(currentNode: BaseNode) {
-        if (currentNode.type === 'INSTANCE') {
-            const isExposedInstance = currentNode.exposedInstances?.length > 0 || false;
-            const exposedInstanceType = isExposedInstance
-                ? currentNode.exposedInstances?.[0]?.type
-                : undefined;
+        if (currentNode.type === 'INSTANCE' && !seenInstanceIds.has(currentNode.id)) {
+            seenInstanceIds.add(currentNode.id);
 
             const componentProperties = [];
             if ('componentProperties' in currentNode) {
@@ -51,10 +120,18 @@ export function generateSchemaJSON(node: ComponentNode | ComponentSetNode): stri
                 }
             }
 
-            instanceNodesArray.push({
-                name: currentNode.name,
-                exposedInstanceType,
-            });
+            if (componentProperties.length > 0) {
+                const nestedInstances = extractNestedInstances(currentNode);
+
+                instanceNodesArray.push({
+                    id: currentNode.id,
+                    name: currentNode.name,
+                    parentName: currentNode.parent?.name || undefined,
+                    isExposedInstance: currentNode.exposedInstances?.length > 0 || false,
+                    componentProperties,
+                    nestedInstances: nestedInstances.length > 0 ? nestedInstances : undefined,
+                });
+            }
         }
 
         if ('children' in currentNode && currentNode.children) {
@@ -64,11 +141,7 @@ export function generateSchemaJSON(node: ComponentNode | ComponentSetNode): stri
 
     traverseNodeTree(node);
 
-    // instanceNodesArray = instanceNodesArray.filter(
-    //     (instanceNode) => instanceNode.exposedInstanceType?.toLowerCase() !== "instance"
-    // );
-
-    const seenNames = new Set();
+    const seenNames = new Set<string>();
     instanceNodesArray = instanceNodesArray.filter((instanceNode) => {
         if (seenNames.has(instanceNode.name)) {
             return false;
@@ -77,7 +150,7 @@ export function generateSchemaJSON(node: ComponentNode | ComponentSetNode): stri
         return true;
     });
 
-    console.log("Component Extends", instanceNodesArray);
+    console.log("Uses", instanceNodesArray);
 
     return JSON.stringify({
         componentProperties: propertyDefinitionsArray,

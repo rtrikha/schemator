@@ -1,25 +1,77 @@
 {
   "actionHeader": {
+    "name": "Action Header",
     "nodeType": "component",
     "nodeId": "11456678009785642",
-    "props": {
+    "actionHeaderProps": {
       "size": {
-        "dataType": "enum",
-        "variantOptions": ["small", "medium", "large"],
+        "dataType": "type",
+        "variantOptions": ["sm", "medium", "large"],
         "defaultValue": "small"
       },
       "type": {
-        "dataType": "enum",
-        "variantOptions": ["icon", "illustration"],
-        "defaultValue": "icon"
+        "variantType": "variant",
+        "variantOptions": ["JSX"]
       },
       "title": {
         "dataType": "string"
       },
       "subtitle": {
         "dataType": "string"
+      },
+      "uses":{
+          "headerActions": {
+            "defaultValue": {
+              "variant": "text"
+            },
+            "component" : "header",
+            "propType": "component",
+            "variantOptions": ["textButton"],
+            "omit": ["variant"]
+          }
       }
-    },
-    "extends": ["avatar", "button"]
+    }
   }
 }
+
+
+{
+    "button": {
+      "name": "Button",
+      "nodeType": "component",
+      "nodeId": "11456678009785642",
+      "ButtonProps": {
+        "size": {
+          "propType": "literal",
+          "options": ["small", "medium", "large"],
+          "defaultValue": "small"
+        },
+        "type": {
+          "propType": "type",
+          "variantOptions": ["icon", "illustration"],
+          "defaultValue": "icon"
+        },
+        "title": {
+          "dataType": "string"
+        },
+        "subtitle": {
+          "dataType": "string"
+        },
+        "buttonActions": {
+          "defaultValue": {
+            "variant": "text"
+          },
+          "propType": "Props",
+          "variantOptions": ["textButton"],
+          "omit": ["variant"]
+        }
+      },
+      "uses": ["avatar", "button"]
+    }
+  }
+
+
+  
+  
+  
+  "propType": ["string","number","boolean","literal(variant)"]
