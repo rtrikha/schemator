@@ -103,6 +103,10 @@ function processComponentProperties(node: ComponentNode | ComponentSetNode) {
         newKey = sanitizedKey + textCustomSuffix;
       }
 
+      if (sanitizedKey.toLowerCase().includes('text')) {
+        newKey = sanitizedKey;
+      }
+
       const formattedKey = toCasedString(newKey);
 
       if (formattedKey !== cleanedKey) {
