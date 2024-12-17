@@ -1,34 +1,13 @@
 {
-  "actionHeader": {
-    "name": "Action Header",
+  "componentName": {
+    "name": "Component Name",
     "nodeType": "component",
-    "nodeId": "11456678009785642",
-    "actionHeaderProps": {
-      "size": {
+    "nodeId": "nodeId",
+    "componentNameProps": {
+      "variantOption1": {
         "dataType": "type",
-        "variantOptions": ["sm", "medium", "large"],
-        "defaultValue": "small"
-      },
-      "type": {
-        "variantType": "variant",
-        "variantOptions": ["JSX"]
-      },
-      "title": {
-        "dataType": "string"
-      },
-      "subtitle": {
-        "dataType": "string"
-      },
-      "uses":{
-          "headerActions": {
-            "defaultValue": {
-              "variant": "text"
-            },
-            "component" : "header",
-            "propType": "component",
-            "variantOptions": ["textButton"],
-            "omit": ["variant"]
-          }
+        "variantOptions": ["array of response"],
+        "defaultValue": "default value"
       }
     }
   }

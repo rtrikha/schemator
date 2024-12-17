@@ -16,7 +16,6 @@ const booleanCustomSuffix = '?';
 const textCustomSuffix = ' Text';
 const casingStyle: 'title' | 'upper' | 'lower' | 'sentence' | 'camel' = 'title';
 
-// Function to get and validate the current selection
 function getValidSelection(): { node: ComponentNode | ComponentSetNode; name: string } | null {
   console.log('Rescanning current selection...');
   const selection = figma.currentPage.selection;
@@ -35,13 +34,11 @@ function getValidSelection(): { node: ComponentNode | ComponentSetNode; name: st
   return null;
 }
 
-// Function to process and rename nodes
 function processAndRenameComponents(node: ComponentNode | ComponentSetNode): { updatedCount: number; suffixAddedCount: number } {
   console.log('Starting node processing...');
   let updatedCount = 0;
   let suffixAddedCount = 0;
 
-  // Rename component properties
   if ('componentPropertyDefinitions' in node) {
     Object.entries(node.componentPropertyDefinitions).forEach(([key, def]) => {
       const cleanedKey = key.split('#')[0].trim();
@@ -50,7 +47,6 @@ function processAndRenameComponents(node: ComponentNode | ComponentSetNode): { u
       let suffixedKey = cleanedKey;
       let suffixAdded = false;
 
-      // Add suffix only if not already present
       if (def.type === 'BOOLEAN' && !cleanedKey.endsWith(booleanCustomSuffix)) {
         suffixedKey = sanitizedKey + booleanCustomSuffix;
         suffixAdded = true;
@@ -61,7 +57,6 @@ function processAndRenameComponents(node: ComponentNode | ComponentSetNode): { u
 
       const formattedKey = toCasedString(suffixedKey);
 
-      // Rename only if there is a change
       if (formattedKey !== cleanedKey) {
         node.editComponentProperty(key, { name: formattedKey });
         updatedCount++;
@@ -73,7 +68,6 @@ function processAndRenameComponents(node: ComponentNode | ComponentSetNode): { u
     });
   }
 
-  // Rename child nodes if the node is a ComponentSet
   if (node.type === 'COMPONENT_SET') {
     node.children.forEach((child) => {
       updatedCount += renameNode(child);
@@ -86,7 +80,6 @@ function processAndRenameComponents(node: ComponentNode | ComponentSetNode): { u
   return { updatedCount, suffixAddedCount };
 }
 
-// Helper: Renames a single node
 function renameNode(node: BaseNode): number {
   let changes = 0;
 
@@ -111,7 +104,6 @@ function renameNode(node: BaseNode): number {
   return changes;
 }
 
-// Helper: Converts string to the desired casing style
 function toCasedString(str: string): string {
   if (casingStyle === 'upper') return str.toUpperCase();
   if (casingStyle === 'lower') return str.toLowerCase();
@@ -130,7 +122,6 @@ function toCasedString(str: string): string {
     .join(' ');
 }
 
-// Main plugin logic
 figma.on('run', () => {
   const validSelection = getValidSelection();
   if (!validSelection) {
@@ -179,7 +170,6 @@ figma.ui.onmessage = async (msg) => {
     const { node, name } = validSelection;
     const schemaJSON = generateSchemaJSON(node);
 
-    // Send both the JSON and name in a single message
     figma.ui.postMessage({
       type: 'download-ready',
       json: schemaJSON,

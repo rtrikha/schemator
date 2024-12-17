@@ -58,7 +58,7 @@
           return
         }
 
-        const blob = new Blob([jsonToDownload], {
+        const blob = new Blob([JSON.stringify(jsonToDownload, null, 2)], {
           type: 'application/json',
         })
         const url = URL.createObjectURL(blob)
