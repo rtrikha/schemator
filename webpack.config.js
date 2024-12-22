@@ -1,6 +1,7 @@
 const path = require('path')
 const webpack = require('webpack')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
+const HtmlMinimizerPlugin = require('html-minimizer-webpack-plugin')
 
 module.exports = (env, argv) => ({
   mode: argv.mode === 'production' ? 'production' : 'development',
@@ -24,7 +25,23 @@ module.exports = (env, argv) => ({
       },
       {
         test: /\.html$/,
-        loader: 'html-loader',
+        use: [
+          {
+            loader: 'html-loader',
+            options: {
+              minimize: {
+                removeComments: true,
+                collapseWhitespace: true,
+                minifyCSS: true,
+                minifyJS: true,
+                removeRedundantAttributes: true,
+                removeScriptTypeAttributes: true,
+                removeStyleLinkTypeAttributes: true,
+                useShortDoctype: true,
+              },
+            },
+          },
+        ],
       },
     ],
   },
@@ -41,6 +58,22 @@ module.exports = (env, argv) => ({
       template: './src/ui.html',
       filename: 'ui.html',
       inject: false,
+      minify: {
+        removeComments: true,
+        collapseWhitespace: true,
+        removeRedundantAttributes: true,
+        useShortDoctype: true,
+        removeEmptyAttributes: true,
+        removeStyleLinkTypeAttributes: true,
+        keepClosingSlash: true,
+        minifyJS: true,
+        minifyCSS: true,
+        minifyURLs: true,
+      },
     }),
   ],
+  optimization: {
+    minimize: true,
+    minimizer: [new HtmlMinimizerPlugin()],
+  },
 })
