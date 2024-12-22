@@ -1,3 +1,5 @@
+import { includeStringDefaults } from './constants';
+
 interface ComponentProperty {
     dataType: string;
     variantOptions?: string[];
@@ -9,15 +11,28 @@ export function generateSchemaJSON(node: ComponentNode | ComponentSetNode): obje
     const nodeId = node.id;
     const nodeType = node.type === 'COMPONENT' ? 'component' : 'componentSet';
 
-    const props: Record<string, ComponentProperty> = {};
+    const variantProps = new Map<string, ComponentProperty>();
+    const otherProps = new Map<string, ComponentProperty>();
+
     if ('componentPropertyDefinitions' in node) {
         Object.entries(node.componentPropertyDefinitions).forEach(([key, def]) => {
             const propName = toCamelCase(key.split('#')[0].trim());
 
             const componentProperty: ComponentProperty = {
                 dataType: mapDataType(def.type),
-                defaultValue: def.defaultValue || null,
             };
+
+            if (def.type === 'BOOLEAN') {
+                if (def.defaultValue !== null) {
+                    componentProperty.defaultValue = def.defaultValue;
+                }
+            } else if (def.type === 'TEXT') {
+                if (includeStringDefaults) {
+                    componentProperty.defaultValue = def.defaultValue || null;
+                }
+            } else {
+                componentProperty.defaultValue = def.defaultValue || null;
+            }
 
             if (componentProperty.dataType === 'instanceSwap') {
                 delete componentProperty.defaultValue;
@@ -27,9 +42,15 @@ export function generateSchemaJSON(node: ComponentNode | ComponentSetNode): obje
                 componentProperty.variantOptions = def.variantOptions;
             }
 
-            props[propName] = componentProperty;
+            if (def.type === 'VARIANT') {
+                variantProps.set(propName, componentProperty);
+            } else {
+                otherProps.set(propName, componentProperty);
+            }
         });
     }
+
+    const props = Object.fromEntries(new Map([...variantProps, ...otherProps]));
 
     const schema = {
         [toCamelCase(nodeName)]: {
@@ -41,7 +62,6 @@ export function generateSchemaJSON(node: ComponentNode | ComponentSetNode): obje
     };
 
     console.log('Generated Schema:', JSON.stringify(schema, null, 2));
-
     return schema;
 }
 

@@ -1,23 +1,12 @@
 import { generateSchemaJSON } from './generateSchema';
-
-const renameConditions = [
-  { regex: /\b2xs\b/i, replacement: 'Extra Extra Small' },
-  { regex: /\bxs\b/i, replacement: 'Extra Small' },
-  { regex: /\bsm\b/i, replacement: 'Small' },
-  { regex: /\bs\b/i, replacement: 'Small' },
-  { regex: /\bmd\b/i, replacement: 'Medium' },
-  { regex: /\bm\b/i, replacement: 'Medium' },
-  { regex: /\blg\b/i, replacement: 'Large' },
-  { regex: /\bl\b/i, replacement: 'Large' },
-  { regex: /\bxl\b/i, replacement: 'Extra Large' },
-];
-
-const booleanCustomSuffix = '?';
-const textCustomSuffix = ' Text';
-const casingStyle: 'title' | 'upper' | 'lower' | 'sentence' | 'camel' = 'title';
+import {
+  renameConditions,
+  booleanCustom,
+  textCustomSuffix,
+  casingStyle
+} from './constants';
 
 function getValidSelection(): { node: ComponentNode | ComponentSetNode; name: string } | null {
-  console.log('Rescanning current selection...');
   const selection = figma.currentPage.selection;
 
   if (
@@ -25,11 +14,9 @@ function getValidSelection(): { node: ComponentNode | ComponentSetNode; name: st
     (selection[0].type === 'COMPONENT' || selection[0].type === 'COMPONENT_SET')
   ) {
     const node = selection[0] as ComponentNode | ComponentSetNode;
-    console.log('Valid selection found:', node.name);
     return { node, name: node.name };
   }
 
-  console.warn('Invalid or no selection. Please select a valid component or component set.');
   figma.notify('Please select a valid component or component set.');
   return null;
 }
@@ -44,25 +31,36 @@ function processAndRenameComponents(node: ComponentNode | ComponentSetNode): { u
       const cleanedKey = key.split('#')[0].trim();
       const sanitizedKey = cleanedKey.replace(/[^a-zA-Z0-9\s]/g, '');
 
-      let suffixedKey = cleanedKey;
-      let suffixAdded = false;
+      let modifiedKey = cleanedKey;
+      let modified = false;
 
-      if (def.type === 'BOOLEAN' && !cleanedKey.endsWith(booleanCustomSuffix)) {
-        suffixedKey = sanitizedKey + booleanCustomSuffix;
-        suffixAdded = true;
+      if (def.type === 'BOOLEAN') {
+        const hasPrefix = cleanedKey.toLowerCase().startsWith(booleanCustom.prefix.toLowerCase());
+        const hasSuffix = cleanedKey.endsWith(booleanCustom.suffix);
+
+        if (!hasPrefix || !hasSuffix) {
+          modifiedKey = sanitizedKey;
+          if (!hasPrefix) {
+            modifiedKey = `${booleanCustom.prefix} ${modifiedKey}`;
+          }
+          if (!hasSuffix) {
+            modifiedKey = `${modifiedKey}${booleanCustom.suffix}`;
+          }
+          modified = true;
+        }
       } else if (def.type === 'TEXT' && !cleanedKey.toLowerCase().endsWith(textCustomSuffix.toLowerCase())) {
-        suffixedKey = sanitizedKey + textCustomSuffix;
-        suffixAdded = true;
+        modifiedKey = sanitizedKey + textCustomSuffix;
+        modified = true;
       }
 
-      const formattedKey = toCasedString(suffixedKey);
+      const formattedKey = toCasedString(modifiedKey);
 
       if (formattedKey !== cleanedKey) {
         node.editComponentProperty(key, { name: formattedKey });
         updatedCount++;
       }
 
-      if (suffixAdded) {
+      if (modified) {
         suffixAddedCount++;
       }
     });
@@ -131,7 +129,11 @@ figma.on('run', () => {
 
   const { node } = validSelection;
 
-  figma.showUI(__html__, { width: 300, height: 200 });
+  figma.showUI(__html__, {
+    width: 360,
+    height: 420,
+    themeColors: true
+  });
   figma.ui.postMessage({ type: 'selected-component-name', name: node.name });
 });
 
