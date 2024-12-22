@@ -1,5 +1,6 @@
 <p align="center">
-<img width="40%" margin="0 auto" alt="schematorLogo" src="https://github.com/user-attachments/assets/2949ff89-4fc9-4363-aaee-2feb5f21a3c7">
+<img width="40%" margin="0 auto" alt="schematorLogo" src="https://github.com/use![logoBlack](https://github.com/user-attachments/assets/31f1776d-df1a-4e24-9eef-c5adac8194e3)
+r-attachments/assets/2949ff89-4fc9-4363-aaee-2feb5f21a3c7">
 </p>
 
 <b>What is Schemator?</b></br>
