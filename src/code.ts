@@ -7,6 +7,7 @@ import {
 } from './constants';
 
 function getValidSelection(): { node: ComponentNode | ComponentSetNode; name: string } | null {
+  1
   const selection = figma.currentPage.selection;
 
   if (
